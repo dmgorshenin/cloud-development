@@ -1,0 +1,74 @@
+﻿@inject IConfiguration Configuration 
+@inject HttpClient Client
+
+<CardDeck>
+    <Card>
+        <CardHeader>
+            <Heading Size="HeadingSize.Is5"><Icon Name="IconName.Table" />  Характеристики текущего объекта</Heading>
+        </CardHeader>
+        <CardBody>
+            <Table Bordered >
+                <TableHeader ThemeContrast="ThemeContrast.Light">
+                     <TableRow>
+                        <TableHeaderCell>#</TableHeaderCell>
+                        <TableHeaderCell>Характеристика</TableHeaderCell>
+                        <TableHeaderCell>Значение</TableHeaderCell>
+                     </TableRow>
+                </TableHeader>
+                <TableBody>
+                    @if(Value is null)
+                    {
+                        <TableRow>
+                            <TableRowCell>1</TableRowCell>
+                            <TableRowCell>нет данных</TableRowCell>
+                            <TableRowCell>нет данных</TableRowCell>
+                        </TableRow>
+                    }
+                    else
+                    {
+                        var array = Value.ToArray();
+                        foreach (var property in array)
+                        {
+                            <TableRow>
+                                <TableRowCell>@(Array.IndexOf(array, property)+1)</TableRowCell>
+                                <TableRowCell>@property.Key</TableRowCell>
+                                <TableRowCell>@property.Value?.ToString()</TableRowCell>
+                            </TableRow>
+                        }
+                    }
+                </TableBody>
+            </Table>
+        </CardBody>
+    </Card>
+    
+    <Card Margin="Margin.Is3.OnY">
+        <CardHeader>
+            <Heading Size="HeadingSize.Is5"><Icon Name="IconName.Send" />  Запросить новый объект</Heading>
+        </CardHeader>
+        <CardBody>
+            <Row>
+                <Column ColumnSize="ColumnSize.Is4">
+                    <Text>Идентификатор нового объекта:</Text>
+                </Column>
+                <Column ColumnSize="ColumnSize.Is4">
+                    <NumericEdit TValue="int" @bind-Value="@Id"/>
+                </Column>
+                <Column ColumnSize="ColumnSize.Is4">
+                    <Button Clicked=RequestNewData Color="Color.Primary">Запросить данные  <Icon Name="IconName.ArrowRight" /></Button>
+                </Column>
+            </Row>
+        </CardBody>
+    </Card>
+</CardDeck>
+
+@code {
+    private JsonObject? Value { get; set; }
+    private int Id { get; set; }
+
+    private async Task RequestNewData()
+    {
+        var baseAddress = Configuration["BaseAddress"] ?? throw new KeyNotFoundException("Конфигурация клиента не содержит параметра BaseAddress");
+        Value = await Client.GetFromJsonAsync<JsonObject>($"{baseAddress}?id={Id}", new JsonSerializerOptions { });
+        StateHasChanged();
+    }
+}
