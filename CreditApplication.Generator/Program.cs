@@ -36,13 +36,13 @@ app.MapGet("/credit-application", async (
     CancellationToken cancellationToken) =>
 {
     logger.LogInformation("Received request for credit application with ID: {Id}", id);
-    
+
     if (id <= 0)
     {
         logger.LogWarning("Received invalid ID: {Id}", id);
         return Results.BadRequest(new { error = "ID must be a positive number" });
     }
-    
+
     try
     {
         var application = await service.GetByIdAsync(id, cancellationToken);

@@ -9,8 +9,8 @@ namespace CreditApplication.Generator.Services;
 public class CreditApplicationGenerator(ILogger<CreditApplicationGenerator> logger)
 {
     private const double MinInterestRate = 16.0;
-    
-    private static readonly string[] _creditTypes = 
+
+    private static readonly string[] _creditTypes =
     [
         "Потребительский",
         "Ипотека",
@@ -19,7 +19,7 @@ public class CreditApplicationGenerator(ILogger<CreditApplicationGenerator> logg
         "Кредит на рефинансирование"
     ];
 
-    private static readonly string[] _statuses = 
+    private static readonly string[] _statuses =
     [
         "Новая",
         "В обработке",
@@ -56,7 +56,7 @@ public class CreditApplicationGenerator(ILogger<CreditApplicationGenerator> logg
             });
 
         var application = faker.Generate();
-        
+
         _logger.LogInformation(
             "Credit application generated: ID={Id}, Type={CreditType}, Status={Status}, Amount={Amount}",
             application.Id,
@@ -78,7 +78,7 @@ public class CreditApplicationGenerator(ILogger<CreditApplicationGenerator> logg
     private static void SetStatusDependentFields(Faker faker, CreditApplicationModel app)
     {
         var isTerminal = _terminalStatuses.Contains(app.Status);
-        
+
         if (isTerminal)
         {
             var applicationDateTime = app.ApplicationDate.ToDateTime(TimeOnly.MinValue);
