@@ -5,9 +5,11 @@ var redis = builder.AddRedis("redis")
 
 var generator = builder.AddProject<Projects.CreditApplication_Generator>("generator")
     .WithReference(redis)
-    .WithExternalHttpEndpoints();
+    .WithExternalHttpEndpoints()
+    .WaitFor(redis);
 
 builder.AddProject<Projects.Client_Wasm>("client")
-    .WithReference(generator);
+    .WithReference(generator)
+    .WaitFor(generator);
 
 builder.Build().Run();

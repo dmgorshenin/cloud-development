@@ -23,7 +23,11 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            policy.WithOrigins("https://your-production-frontend.example")
+            var allowedOrigins = builder.Configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>() ?? [];
+
+            policy.WithOrigins(allowedOrigins)
                   .WithMethods("GET")
                   .WithHeaders("Content-Type", "Authorization");
         }

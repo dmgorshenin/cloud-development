@@ -51,7 +51,7 @@ public class CreditApplicationGenerator(ILogger<CreditApplicationGenerator> logg
             .FinishWith(SetStatusDependentFields);
 
         var application = faker.Generate();
-        
+
         logger.LogInformation(
             "Credit application generated: ID={Id}, Type={CreditType}, Status={Status}, Amount={Amount}",
             application.Id,
