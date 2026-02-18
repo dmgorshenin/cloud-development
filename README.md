@@ -164,28 +164,6 @@ graph TB
 
 При запуске через Aspire шлюз автоматически получает адреса реплик из переменных окружения (`services:{name}:http:0`) и подставляет их в конфигурацию Ocelot через `AddInMemoryCollection`, не затрагивая `ocelot.json`.
 
-### Health Checks
-
-Все сервисы публикуют два эндпоинта:
-
-| Эндпоинт | Назначение |
-|----------|-----------|
-| `/health` | Общая готовность сервиса (readiness) |
-| `/alive` | Liveness — сервис запущен и не завис |
-
-На шлюзе `UseHealthChecks` размещён **до** `UseOcelot`, чтобы Ocelot не перехватывал запросы к health-эндпоинтам.
-
-### ServiceDefaults
-
-Два варианта метода расширения для регистрации общих сервисов:
-
-| Метод | Применяется в | Отличие |
-|-------|--------------|---------|
-| `AddServiceDefaults()` | Generator | + `ConfigureHttpClientDefaults` + `AddServiceDiscovery` |
-| `AddGatewayDefaults()` | Gateway | Без `ConfigureHttpClientDefaults` (не конфликтует с внутренними HTTP-клиентами Ocelot) |
-
----
-
 ## 🛠️ Используемые технологии
 
 | Технология | Версия | Назначение |
@@ -201,10 +179,11 @@ graph TB
 ---
 
 ### Скриншоты
-<img width="1919" height="654" alt="image" src="https://github.com/user-attachments/assets/42921805-e5a3-453c-a297-eada8133ccfb" />
-<img width="1919" height="1014" alt="image" src="https://github.com/user-attachments/assets/de000cb5-3174-49ed-9845-ba3d87e19f67" />
-<img width="1733" height="234" alt="image" src="https://github.com/user-attachments/assets/33511b18-33e3-44a9-9f36-0b6820faa94c" />
-<img width="1919" height="697" alt="image" src="https://github.com/user-attachments/assets/585248b2-0293-4786-a881-9e716c5c9ffc" />
+<img width="1914" height="669" alt="image" src="https://github.com/user-attachments/assets/9afcd5d3-ed36-468d-b575-a90775c596ec" />
+<img width="833" height="647" alt="image" src="https://github.com/user-attachments/assets/cf56b8b2-1fd0-4e46-9ea8-9f03950d2a4a" />
+<img width="1915" height="1010" alt="image" src="https://github.com/user-attachments/assets/22fa8a2a-2755-4575-a270-3789ad5a4016" />
+<img width="1280" height="535" alt="image" src="https://github.com/user-attachments/assets/28a8ad4f-f2f9-4819-9eec-a8793d86de21" />
+
 
 
 
