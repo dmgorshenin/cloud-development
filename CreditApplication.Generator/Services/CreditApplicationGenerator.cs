@@ -27,7 +27,7 @@ public class CreditApplicationGenerator(ILogger<CreditApplicationGenerator> logg
         "Отклонена"
     ];
 
-    private static readonly string[] _terminalStatuses = ["Одобрена", "Отклонена"];
+    private static readonly HashSet<string> _terminalStatuses = ["Одобрена", "Отклонена"];
 
     /// <summary>
     /// Генерирует кредитную заявку по указанному идентификатору

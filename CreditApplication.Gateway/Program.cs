@@ -8,6 +8,29 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddGatewayDefaults();
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            var allowedOrigins = builder.Configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>() ?? [];
+
+            policy.WithOrigins(allowedOrigins)
+                  .WithMethods("GET")
+                  .WithHeaders("Content-Type", "Authorization");
+        }
+    });
+});
+
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
 var generatorNames = builder.Configuration.GetSection("GeneratorServices").Get<string[]>() ?? [];
@@ -38,10 +61,7 @@ var app = builder.Build();
 app.UseCors();
 
 app.UseHealthChecks("/health");
-app.UseHealthChecks("/alive", new HealthCheckOptions
-{
-    Predicate = r => r.Tags.Contains("live")
-});
+app.UseHealthChecks("/alive", new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });
 
 await app.UseOcelot();
 

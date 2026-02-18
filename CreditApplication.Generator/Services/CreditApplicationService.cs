@@ -32,12 +32,19 @@ public class CreditApplicationService(
         if (!string.IsNullOrEmpty(cachedData))
         {
             logger.LogInformation("Credit application {Id} found in cache", id);
-            var cachedApplication = JsonSerializer.Deserialize<CreditApplicationModel>(cachedData);
+
+            CreditApplicationModel? cachedApplication = null;
+            try
+            {
+                cachedApplication = JsonSerializer.Deserialize<CreditApplicationModel>(cachedData);
+            }
+            catch (JsonException ex)
+            {
+                logger.LogWarning(ex, "Failed to deserialize cached credit application {Id}, regenerating", id);
+            }
 
             if (cachedApplication is not null)
-            {
                 return cachedApplication;
-            }
 
             logger.LogWarning("Cached data for credit application {Id} deserialized to null, regenerating", id);
         }

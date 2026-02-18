@@ -13,7 +13,6 @@ builder.Services.AddScoped<CreditApplicationService>();
 
 var app = builder.Build();
 
-app.UseCors();
 app.UseSerilogRequestLogging();
 
 app.MapDefaultEndpoints();

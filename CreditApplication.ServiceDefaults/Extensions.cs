@@ -64,10 +64,8 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
-                tracing.AddAspNetCoreInstrumentation(options =>
-                 {
-                     options.Filter = ctx => ctx.Request.Path != "/health";
-                 });
+                tracing.AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation();
             });
 
         builder.AddOpenTelemetryExporters();

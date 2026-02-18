@@ -30,6 +30,11 @@ public sealed class WeightedRandomLoadBalancer : ILoadBalancer
             return new ErrorResponse<ServiceHostAndPort>(
                 new ServicesAreNullError("No downstream services are available"));
 
+        return new OkResponse<ServiceHostAndPort>(SelectByWeight(services).HostAndPort);
+    }
+
+    private Service SelectByWeight(IList<Service> services)
+    {
         var weighted = services
             .Select(s => (
                 Service: s,
@@ -39,17 +44,23 @@ public sealed class WeightedRandomLoadBalancer : ILoadBalancer
             .ToList();
 
         var total = weighted.Sum(x => x.Weight);
-        var roll = Random.Shared.NextDouble() * total;
 
+        // If all weights are zero or missing, fall back to uniform random selection.
+        if (total <= 0)
+            return services[Random.Shared.Next(services.Count)];
+
+        var roll = Random.Shared.NextDouble() * total;
         var cumulative = 0.0;
+
         foreach (var (service, weight) in weighted)
         {
             cumulative += weight;
             if (roll < cumulative)
-                return new OkResponse<ServiceHostAndPort>(service.HostAndPort);
+                return service;
         }
 
-        return new OkResponse<ServiceHostAndPort>(weighted[^1].Service.HostAndPort);
+        // Guard against floating-point rounding: cumulative may fall infinitesimally short of total.
+        return weighted[^1].Service;
     }
 
     // No connection tracking needed for stateless weighted random load balancing.
