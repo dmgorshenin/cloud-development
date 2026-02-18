@@ -97,20 +97,27 @@ cloud-development/
 
 ```mermaid
 graph TB
-    Client["Blazor WebAssembly\n:статический хост"]
+    Client["Blazor WebAssembly
+    :статический хост"]
 
     subgraph Gateway["API Gateway — Ocelot :5200"]
-        LB["WeightedRandomLoadBalancer\n0.5 / 0.3 / 0.2"]
+        LB["WeightedRandomLoadBalancer
+        0.5 / 0.3 / 0.2"]
     end
 
     subgraph Generators["Реплики генератора"]
-        G1["generator-1\n:5101"]
-        G2["generator-2\n:5102"]
-        G3["generator-3\n:5103"]
+        G1["generator-1 
+        :5101"]
+        G2["generator-2
+        :5102"]
+        G3["generator-3
+        :5103"]
     end
 
-    Redis[("Redis\nDistributed Cache")]
-    Bogus["Bogus Faker\n(seed = ID заявки)"]
+    Redis[("Redis
+    Distributed Cache")]
+    Bogus["Bogus Faker
+    (seed = ID заявки)"]
 
     Client -->|"GET /credit-application"| Gateway
     Gateway -->|"Взвешенный выбор"| LB
