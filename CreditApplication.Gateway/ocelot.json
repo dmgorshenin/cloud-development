@@ -1,0 +1,25 @@
+{
+  "GeneratorServices": [ "generator-1", "generator-2", "generator-3" ],
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/credit-application",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "localhost", "Port": 5101 },
+        { "Host": "localhost", "Port": 5102 },
+        { "Host": "localhost", "Port": 5103 }
+      ],
+      "UpstreamPathTemplate": "/credit-application",
+      "UpstreamHttpMethod": [ "Get" ],
+      "LoadBalancerOptions": {
+        "Type": "WeightedRandomLoadBalancer"
+      }
+    }
+  ],
+  "ReplicaWeights": {
+    "localhost:5101": 0.5,
+    "localhost:5102": 0.3,
+    "localhost:5103": 0.2
+  },
+  "GlobalConfiguration": {}
+}

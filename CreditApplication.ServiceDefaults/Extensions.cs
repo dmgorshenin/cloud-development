@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -18,6 +19,7 @@ public static class Extensions
         builder.ConfigureSerilog();
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
+        builder.AddDefaultCors();
         builder.Services.AddServiceDiscovery();
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
@@ -62,8 +64,10 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
-                tracing.AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation();
+                tracing.AddAspNetCoreInstrumentation(options =>
+                 {
+                     options.Filter = ctx => ctx.Request.Path != "/health";
+                 });
             });
 
         builder.AddOpenTelemetryExporters();
@@ -87,6 +91,44 @@ public static class Extensions
     {
         builder.Services.AddHealthChecks()
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddGatewayDefaults(this IHostApplicationBuilder builder)
+    {
+        builder.ConfigureSerilog();
+        builder.ConfigureOpenTelemetry();
+        builder.AddDefaultHealthChecks();
+        builder.AddDefaultCors();
+
+        return builder;
+    }
+
+    public static IHostApplicationBuilder AddDefaultCors(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                if (builder.Environment.IsDevelopment())
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                }
+                else
+                {
+                    var allowedOrigins = builder.Configuration
+                        .GetSection("CorsAllowedOrigins")
+                        .Get<string[]>() ?? [];
+
+                    policy.WithOrigins(allowedOrigins)
+                          .WithMethods("GET")
+                          .WithHeaders("Content-Type", "Authorization");
+                }
+            });
+        });
 
         return builder;
     }
