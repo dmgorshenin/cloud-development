@@ -9,6 +9,7 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 
 namespace CreditApplication.ServiceDefaults;
 
@@ -19,7 +20,6 @@ public static class Extensions
         builder.ConfigureSerilog();
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
-        builder.AddDefaultCors();
         builder.Services.AddServiceDiscovery();
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
@@ -32,15 +32,31 @@ public static class Extensions
 
     public static IHostApplicationBuilder ConfigureSerilog(this IHostApplicationBuilder builder)
     {
-        Log.Logger = new LoggerConfiguration()
+        var loggerConfig = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration)
             .Enrich.FromLogContext()
             .Enrich.WithEnvironmentName()
             .Enrich.WithThreadId()
             .Enrich.WithMachineName()
             .WriteTo.Console(outputTemplate:
-                "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-            .CreateLogger();
+                "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}");
+
+        var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            loggerConfig.WriteTo.OpenTelemetry(options =>
+            {
+                options.Endpoint = otlpEndpoint;
+                options.Protocol = OtlpProtocol.Grpc;
+                options.ResourceAttributes = new Dictionary<string, object>
+                {
+                    ["service.name"] = builder.Configuration["OTEL_SERVICE_NAME"]
+                        ?? builder.Environment.ApplicationName
+                };
+            });
+        }
+
+        Log.Logger = loggerConfig.CreateLogger();
 
         builder.Services.AddSerilog();
 
@@ -49,12 +65,6 @@ public static class Extensions
 
     public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
     {
-        builder.Logging.AddOpenTelemetry(logging =>
-        {
-            logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
-        });
-
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
@@ -103,11 +113,13 @@ public static class Extensions
         return builder;
     }
 
+    public const string CorsPolicyName = "GatewayPolicy";
+
     public static IHostApplicationBuilder AddDefaultCors(this IHostApplicationBuilder builder)
     {
         builder.Services.AddCors(options =>
         {
-            options.AddDefaultPolicy(policy =>
+            options.AddPolicy(CorsPolicyName, policy =>
             {
                 if (builder.Environment.IsDevelopment())
                 {
@@ -118,7 +130,7 @@ public static class Extensions
                 else
                 {
                     var allowedOrigins = builder.Configuration
-                        .GetSection("CorsAllowedOrigins")
+                        .GetSection("Cors:AllowedOrigins")
                         .Get<string[]>() ?? [];
 
                     policy.WithOrigins(allowedOrigins)

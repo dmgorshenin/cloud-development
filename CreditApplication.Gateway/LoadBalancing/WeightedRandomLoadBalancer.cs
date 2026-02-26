@@ -5,18 +5,14 @@ using Ocelot.Values;
 
 namespace CreditApplication.Gateway.LoadBalancing;
 
-public sealed class WeightedRandomLoadBalancer : ILoadBalancer
+public sealed class WeightedRandomLoadBalancer(
+    IServiceDiscoveryProvider serviceDiscovery,
+    IReadOnlyDictionary<string, double> weightsByName,
+    IReadOnlyDictionary<string, string> hostPortToName) : ILoadBalancer
 {
-    private readonly IServiceDiscoveryProvider _serviceDiscovery;
-    private readonly IReadOnlyDictionary<string, double> _weights;
-
-    public WeightedRandomLoadBalancer(
-        IServiceDiscoveryProvider serviceDiscovery,
-        IReadOnlyDictionary<string, double> weights)
-    {
-        _serviceDiscovery = serviceDiscovery;
-        _weights = weights;
-    }
+    private readonly IServiceDiscoveryProvider _serviceDiscovery = serviceDiscovery;
+    private readonly IReadOnlyDictionary<string, double> _weightsByName = weightsByName;
+    private readonly IReadOnlyDictionary<string, string> _hostPortToName = hostPortToName;
 
     public async Task<Response<ServiceHostAndPort>> Lease(HttpContext httpContext)
     {
@@ -33,19 +29,20 @@ public sealed class WeightedRandomLoadBalancer : ILoadBalancer
         return new OkResponse<ServiceHostAndPort>(SelectByWeight(services).HostAndPort);
     }
 
-    private Service SelectByWeight(IList<Service> services)
+    private Service SelectByWeight(List<Service> services)
     {
         var weighted = services
-            .Select(s => (
-                Service: s,
-                Weight: _weights.TryGetValue(
-                    $"{s.HostAndPort.DownstreamHost}:{s.HostAndPort.DownstreamPort}",
-                    out var w) ? w : 1.0))
+            .Select(s =>
+            {
+                var hostPort = $"{s.HostAndPort.DownstreamHost}:{s.HostAndPort.DownstreamPort}";
+                var name = _hostPortToName.TryGetValue(hostPort, out var n) ? n : hostPort;
+                var weight = _weightsByName.TryGetValue(name, out var w) ? w : 1.0;
+                return (Service: s, Weight: weight);
+            })
             .ToList();
 
         var total = weighted.Sum(x => x.Weight);
 
-        // If all weights are zero or missing, fall back to uniform random selection.
         if (total <= 0)
             return services[Random.Shared.Next(services.Count)];
 
@@ -55,11 +52,10 @@ public sealed class WeightedRandomLoadBalancer : ILoadBalancer
         foreach (var (service, weight) in weighted)
         {
             cumulative += weight;
-            if (roll < cumulative)
+            if (roll <= cumulative)
                 return service;
         }
 
-        // Guard against floating-point rounding: cumulative may fall infinitesimally short of total.
         return weighted[^1].Service;
     }
 

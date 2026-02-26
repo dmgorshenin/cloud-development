@@ -8,57 +8,50 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddGatewayDefaults();
 
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        }
-        else
-        {
-            var allowedOrigins = builder.Configuration
-                .GetSection("Cors:AllowedOrigins")
-                .Get<string[]>() ?? [];
-
-            policy.WithOrigins(allowedOrigins)
-                  .WithMethods("GET")
-                  .WithHeaders("Content-Type", "Authorization");
-        }
-    });
-});
-
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
 var generatorNames = builder.Configuration.GetSection("GeneratorServices").Get<string[]>() ?? [];
+var serviceWeights = builder.Configuration
+    .GetSection("ReplicaWeights")
+    .Get<Dictionary<string, double>>() ?? [];
+
 var addressOverrides = new List<KeyValuePair<string, string?>>();
+var hostPortToName = new Dictionary<string, string>();
+
 for (var i = 0; i < generatorNames.Length; i++)
 {
-    var url = builder.Configuration[$"services:{generatorNames[i]}:http:0"];
+    var name = generatorNames[i];
+    var url = builder.Configuration[$"services:{name}:http:0"];
+
+    string resolvedHost, resolvedPort;
     if (!string.IsNullOrEmpty(url) && Uri.TryCreate(url, UriKind.Absolute, out var uri))
     {
-        addressOverrides.Add(new($"Routes:0:DownstreamHostAndPorts:{i}:Host", uri.Host));
-        addressOverrides.Add(new($"Routes:0:DownstreamHostAndPorts:{i}:Port", uri.Port.ToString()));
+        resolvedHost = uri.Host;
+        resolvedPort = uri.Port.ToString();
+        addressOverrides.Add(new($"Routes:0:DownstreamHostAndPorts:{i}:Host", resolvedHost));
+        addressOverrides.Add(new($"Routes:0:DownstreamHostAndPorts:{i}:Port", resolvedPort));
     }
+    else
+    {
+        resolvedHost = builder.Configuration[$"Routes:0:DownstreamHostAndPorts:{i}:Host"] ?? "localhost";
+        resolvedPort = builder.Configuration[$"Routes:0:DownstreamHostAndPorts:{i}:Port"] ?? "0";
+    }
+
+    if (serviceWeights.ContainsKey(name))
+        hostPortToName[$"{resolvedHost}:{resolvedPort}"] = name;
 }
+
 if (addressOverrides.Count > 0)
     builder.Configuration.AddInMemoryCollection(addressOverrides);
-
-var weights = builder.Configuration
-    .GetSection("ReplicaWeights")
-    .Get<Dictionary<string, double>>() ?? new Dictionary<string, double>();
 
 builder.Services
     .AddOcelot(builder.Configuration)
     .AddCustomLoadBalancer((route, serviceDiscovery) =>
-        new WeightedRandomLoadBalancer(serviceDiscovery, weights));
+        new WeightedRandomLoadBalancer(serviceDiscovery, serviceWeights, hostPortToName));
 
 var app = builder.Build();
 
-app.UseCors();
+app.UseCors(Extensions.CorsPolicyName);
 
 app.UseHealthChecks("/health");
 app.UseHealthChecks("/alive", new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });

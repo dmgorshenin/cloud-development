@@ -9,15 +9,18 @@ if (builder.Environment.IsDevelopment())
 
 var generator1 = builder.AddProject<Projects.CreditApplication_Generator>("generator-1")
     .WithEndpoint("http", endpoint => endpoint.Port = 5101)
-    .WithReference(redis);
+    .WithReference(redis)
+    .WaitFor(redis);
 
 var generator2 = builder.AddProject<Projects.CreditApplication_Generator>("generator-2")
     .WithEndpoint("http", endpoint => endpoint.Port = 5102)
-    .WithReference(redis);
+    .WithReference(redis)
+    .WaitFor(redis);
 
 var generator3 = builder.AddProject<Projects.CreditApplication_Generator>("generator-3")
     .WithEndpoint("http", endpoint => endpoint.Port = 5103)
-    .WithReference(redis);
+    .WithReference(redis)
+    .WaitFor(redis);
 
 var gateway = builder.AddProject<Projects.CreditApplication_Gateway>("gateway")
     .WithEndpoint("http", endpoint => endpoint.Port = 5200)
