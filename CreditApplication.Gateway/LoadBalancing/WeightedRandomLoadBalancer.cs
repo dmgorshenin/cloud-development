@@ -7,16 +7,11 @@ namespace CreditApplication.Gateway.LoadBalancing;
 
 public sealed class WeightedRandomLoadBalancer(
     IServiceDiscoveryProvider serviceDiscovery,
-    IReadOnlyDictionary<string, double> weightsByName,
-    IReadOnlyDictionary<string, string> hostPortToName) : ILoadBalancer
+    IReadOnlyDictionary<string, double> weights) : ILoadBalancer
 {
-    private readonly IServiceDiscoveryProvider _serviceDiscovery = serviceDiscovery;
-    private readonly IReadOnlyDictionary<string, double> _weightsByName = weightsByName;
-    private readonly IReadOnlyDictionary<string, string> _hostPortToName = hostPortToName;
-
     public async Task<Response<ServiceHostAndPort>> Lease(HttpContext httpContext)
     {
-        var services = await _serviceDiscovery.GetAsync();
+        var services = await serviceDiscovery.GetAsync();
 
         if (services is null)
             return new ErrorResponse<ServiceHostAndPort>(
@@ -32,13 +27,11 @@ public sealed class WeightedRandomLoadBalancer(
     private Service SelectByWeight(List<Service> services)
     {
         var weighted = services
-            .Select(s =>
-            {
-                var hostPort = $"{s.HostAndPort.DownstreamHost}:{s.HostAndPort.DownstreamPort}";
-                var name = _hostPortToName.TryGetValue(hostPort, out var n) ? n : hostPort;
-                var weight = _weightsByName.TryGetValue(name, out var w) ? w : 1.0;
-                return (Service: s, Weight: weight);
-            })
+            .Select(s => (
+                Service: s,
+                Weight: weights.TryGetValue(
+                    $"{s.HostAndPort.DownstreamHost}:{s.HostAndPort.DownstreamPort}",
+                    out var w) ? w : 1.0))
             .ToList();
 
         var total = weighted.Sum(x => x.Weight);

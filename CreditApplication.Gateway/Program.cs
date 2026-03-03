@@ -16,7 +16,7 @@ var serviceWeights = builder.Configuration
     .Get<Dictionary<string, double>>() ?? [];
 
 var addressOverrides = new List<KeyValuePair<string, string?>>();
-var hostPortToName = new Dictionary<string, string>();
+var weights = new Dictionary<string, double>();
 
 for (var i = 0; i < generatorNames.Length; i++)
 {
@@ -37,8 +37,8 @@ for (var i = 0; i < generatorNames.Length; i++)
         resolvedPort = builder.Configuration[$"Routes:0:DownstreamHostAndPorts:{i}:Port"] ?? "0";
     }
 
-    if (serviceWeights.ContainsKey(name))
-        hostPortToName[$"{resolvedHost}:{resolvedPort}"] = name;
+    if (serviceWeights.TryGetValue(name, out var weight))
+        weights[$"{resolvedHost}:{resolvedPort}"] = weight;
 }
 
 if (addressOverrides.Count > 0)
@@ -47,7 +47,7 @@ if (addressOverrides.Count > 0)
 builder.Services
     .AddOcelot(builder.Configuration)
     .AddCustomLoadBalancer((route, serviceDiscovery) =>
-        new WeightedRandomLoadBalancer(serviceDiscovery, serviceWeights, hostPortToName));
+        new WeightedRandomLoadBalancer(serviceDiscovery, weights));
 
 var app = builder.Build();
 
