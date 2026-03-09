@@ -83,9 +83,9 @@ public class IntegrationTests(AppHostFixture fixture) : IClassFixture<AppHostFix
         var expectedFileName = $"credit-application-{testId}.json";
         var fileFound = false;
 
-        for (var i = 0; i < 60; i++)
+        for (var i = 0; i < 10; i++)
         {
-            await Task.Delay(2000);
+            await Task.Delay(6000);
 
             using var filesResponse = await httpClient.GetAsync("/files");
             if (filesResponse.IsSuccessStatusCode)
